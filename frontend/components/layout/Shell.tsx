@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   Globe2,
   HeartPulse,
@@ -37,16 +37,66 @@ const navItems: NavigationItem[] = [
   { href: '/coming-soon?section=profiles', label: 'Profiles', icon: Users, isComingSoon: true },
 ];
 
+function SidebarNav({ onNavClick }: { onNavClick: () => void }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  return (
+    <nav className="aws-nav-group" aria-label="DNS Management Navigation">
+      <div className="aws-nav-section-title">DNS Management</div>
+      {navItems.map((item) => {
+        const Icon = item.icon;
+
+        let isActive = false;
+        if (item.href === '/') {
+          isActive = pathname === '/';
+        } else if (item.href.includes('?')) {
+          const [basePath, queryString] = item.href.split('?');
+          const itemSection = new URLSearchParams(queryString).get('section');
+          const currentSection = searchParams.get('section');
+          isActive = pathname === basePath && currentSection === itemSection;
+        } else {
+          isActive = pathname.startsWith(item.href);
+        }
+
+        return (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`aws-nav-link ${isActive ? 'active' : ''}`}
+            onClick={onNavClick}
+          >
+            <Icon size={18} className="aws-nav-link-icon" />
+            <span className="aws-nav-link-text">{item.label}</span>
+            {item.isComingSoon && <span className="aws-coming-soon-badge">Soon</span>}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 export interface ShellProps {
   children: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
 }
 
 export function Shell({ children, breadcrumbs }: ShellProps) {
-  const pathname = usePathname();
   const { user, logout } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  // Keyboard accessibility — close dropdowns/drawers on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setUserDropdownOpen(false);
+        setMobileNavOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Generate default breadcrumbs if not explicitly provided
   const defaultBreadcrumbs: BreadcrumbItem[] = breadcrumbs || [
@@ -80,9 +130,10 @@ export function Shell({ children, breadcrumbs }: ShellProps) {
             <Search size={14} className="aws-topbar-search-icon" />
             <input
               type="text"
-              placeholder="Search services, features, docs (Alt+S)"
+              placeholder="Search services, features, docs"
               className="aws-topbar-search-input"
               readOnly
+              aria-label="Global search"
             />
           </div>
         </div>
@@ -94,6 +145,7 @@ export function Shell({ children, breadcrumbs }: ShellProps) {
               className="aws-user-menu-btn"
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
               aria-expanded={userDropdownOpen}
+              aria-label="User account menu"
             >
               <div className="aws-avatar">
                 {user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon size={14} />}
@@ -104,8 +156,8 @@ export function Shell({ children, breadcrumbs }: ShellProps) {
             {userDropdownOpen && (
               <div className="aws-user-dropdown">
                 <div className="aws-user-dropdown-header">
-                  <div className="aws-user-dropdown-name">{user?.name}</div>
-                  <div className="aws-user-dropdown-email">{user?.email}</div>
+                  <div className="aws-user-dropdown-name">{user?.name || 'Console User'}</div>
+                  <div className="aws-user-dropdown-email">{user?.email || 'demo@aws.local'}</div>
                 </div>
                 <div className="aws-user-dropdown-divider" />
                 <button
@@ -132,29 +184,9 @@ export function Shell({ children, breadcrumbs }: ShellProps) {
           <div className="aws-sidebar-inner">
             <div className="aws-sidebar-header">Route 53 Dashboard</div>
 
-            <nav className="aws-nav-group">
-              <div className="aws-nav-section-title">DNS Management</div>
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive =
-                  item.href === '/'
-                    ? pathname === '/'
-                    : pathname.startsWith(item.href.split('?')[0]);
-
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={`aws-nav-link ${isActive ? 'active' : ''}`}
-                    onClick={() => setMobileNavOpen(false)}
-                  >
-                    <Icon size={18} className="aws-nav-link-icon" />
-                    <span className="aws-nav-link-text">{item.label}</span>
-                    {item.isComingSoon && <span className="aws-coming-soon-badge">Soon</span>}
-                  </Link>
-                );
-              })}
-            </nav>
+            <Suspense fallback={<div className="aws-nav-group" />}>
+              <SidebarNav onNavClick={() => setMobileNavOpen(false)} />
+            </Suspense>
 
             <div className="aws-sidebar-footer">
               <div className="aws-sidebar-account-info">
