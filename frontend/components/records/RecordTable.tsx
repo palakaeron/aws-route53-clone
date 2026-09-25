@@ -13,25 +13,22 @@ export interface RecordTableProps {
   error?: string | null;
   onRetry?: () => void;
   onEdit: (record: DNSRecord) => void;
-  /**
-   * Receives the full DNSRecord so the caller can build a rich
-   * confirmation dialog (type, name, etc.) without window.confirm().
-   */
   onDelete: (record: DNSRecord) => void;
   meta?: PaginationMeta;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
   onCreateClick?: () => void;
+  hasActiveFilter?: boolean;
 }
 
-const typeBadgeMap: Record<string, 'blue' | 'green' | 'orange' | 'purple' | 'gray' | 'red'> = {
+const typeBadgeMap: Record<string, 'blue' | 'purple' | 'gray' | 'orange' | 'green' | 'red'> = {
   A: 'blue',
   AAAA: 'purple',
   CNAME: 'green',
   TXT: 'gray',
   MX: 'orange',
   NS: 'blue',
-  PTR: 'gray',
+  PTR: 'green',
   SRV: 'orange',
   CAA: 'gray',
 };
@@ -47,12 +44,17 @@ export default function RecordTable({
   onPageChange,
   onPageSizeChange,
   onCreateClick,
+  hasActiveFilter = false,
 }: RecordTableProps) {
   const columns: Column<DNSRecord>[] = [
     {
       key: 'name',
       header: 'Record name',
-      cell: (rec) => <span style={{ fontWeight: 600 }}>{rec.name}</span>,
+      cell: (rec) => (
+        <span style={{ fontWeight: 600, color: 'var(--aws-text-dark)' }}>
+          {rec.name}
+        </span>
+      ),
     },
     {
       key: 'type',
@@ -65,15 +67,16 @@ export default function RecordTable({
     },
     {
       key: 'value',
-      header: 'Value / Target',
+      header: 'Value / Routing data',
       cell: (rec) => (
         <span
           style={{
-            maxWidth: 380,
+            maxWidth: 420,
             wordBreak: 'break-all',
             display: 'inline-block',
             fontSize: 12,
-            fontFamily: rec.type === 'A' || rec.type === 'AAAA' ? 'monospace' : 'inherit',
+            fontFamily:
+              rec.type === 'A' || rec.type === 'AAAA' ? 'monospace' : 'inherit',
           }}
         >
           {rec.value}
@@ -82,9 +85,9 @@ export default function RecordTable({
     },
     {
       key: 'ttl',
-      header: 'TTL (s)',
+      header: 'TTL (seconds)',
       cell: (rec) => (
-        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{rec.ttl}</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{rec.ttl}s</span>
       ),
     },
     {
@@ -130,10 +133,14 @@ export default function RecordTable({
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
-      emptyTitle="No DNS records found"
-      emptyDescription="Create a record to define how you want to route traffic for this domain."
-      emptyActionLabel="Create record"
-      onEmptyAction={onCreateClick}
+      emptyTitle={hasActiveFilter ? 'No matching records found' : 'No DNS records in this zone'}
+      emptyDescription={
+        hasActiveFilter
+          ? 'No records matched your search query or filter. Try clearing the search or record type filter.'
+          : 'Create a record to define how you want to route traffic for your domain.'
+      }
+      emptyActionLabel={hasActiveFilter ? undefined : 'Create record'}
+      onEmptyAction={hasActiveFilter ? undefined : onCreateClick}
       meta={meta}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}

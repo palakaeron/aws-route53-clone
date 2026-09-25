@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Shell from '@/components/Shell';
 import RecordForm from '@/components/records/RecordForm';
@@ -15,8 +15,7 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { Plus, RefreshCw, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { Plus, RefreshCw } from 'lucide-react';
 
 const RECORD_TYPES: { value: string; label: string }[] = [
   { value: '', label: 'All record types' },
@@ -40,7 +39,7 @@ interface PendingDeleteRecord {
 export default function HostedZoneDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  // The URL param is the PUBLIC zone ID (e.g. Z1ABCDEFGHIJKL), not the integer PK.
+  // The URL param is the PUBLIC zone ID (e.g. Z1ABCDEFGHIJKL), not the internal integer PK.
   const zoneId = String(params.id);
 
   const [zone, setZone] = useState<HostedZone | null>(null);
@@ -81,24 +80,25 @@ export default function HostedZoneDetailsPage() {
   const [pendingDelete, setPendingDelete] = useState<PendingDeleteRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ── Load zone by public zone ID ─────────────────────────────────────────────
-  useEffect(() => {
-    async function loadZone() {
-      setZoneLoading(true);
-      setZoneError(null);
-      try {
-        const fetchedZone = await api.zones.get(zoneId);
-        setZone(fetchedZone);
-      } catch (err) {
-        setZoneError(err instanceof Error ? err.message : 'Unable to load hosted zone details');
-      } finally {
-        setZoneLoading(false);
-      }
-    }
-    if (zoneId) {
-      void loadZone();
+  // ── Load zone metadata by public zone ID ───────────────────────────────────
+  const fetchZoneDetails = useCallback(async () => {
+    setZoneLoading(true);
+    setZoneError(null);
+    try {
+      const fetchedZone = await api.zones.get(zoneId);
+      setZone(fetchedZone);
+    } catch (err) {
+      setZoneError(err instanceof Error ? err.message : 'Unable to load hosted zone details');
+    } finally {
+      setZoneLoading(false);
     }
   }, [zoneId]);
+
+  useEffect(() => {
+    if (zoneId) {
+      void fetchZoneDetails();
+    }
+  }, [zoneId, fetchZoneDetails]);
 
   // ── Record CRUD ─────────────────────────────────────────────────────────────
   const openCreate = () => {
@@ -114,7 +114,7 @@ export default function HostedZoneDetailsPage() {
   const handleSave = async (payload: {
     name: string;
     type: RecordType;
-    value: string;
+    value: Record<string, any> | string;
     ttl: number;
     priority: number | null;
   }) => {
@@ -124,10 +124,11 @@ export default function HostedZoneDetailsPage() {
       await createRecord(payload);
     }
     setFormOpen(false);
+    void fetchZoneDetails();
   };
 
   /**
-   * Requests deletion — opens the ConfirmModal instead of window.confirm().
+   * Requests record deletion — opens the ConfirmModal instead of window.confirm().
    */
   const handleDeleteRequest = (record: DNSRecord) => {
     setPendingDelete({ id: record.id, name: record.name, type: record.type });
@@ -139,6 +140,7 @@ export default function HostedZoneDetailsPage() {
     try {
       await deleteRecord(pendingDelete.id, pendingDelete.name);
       setPendingDelete(null);
+      void fetchZoneDetails();
     } finally {
       setIsDeleting(false);
     }
@@ -148,6 +150,10 @@ export default function HostedZoneDetailsPage() {
     if (!isDeleting) setPendingDelete(null);
   };
 
+  const handleRefresh = async () => {
+    await Promise.all([fetchZoneDetails(), refetchRecords()]);
+  };
+
   // ── Breadcrumbs & metadata ──────────────────────────────────────────────────
   const breadcrumbs = [
     { label: 'AWS Console', href: '/' },
@@ -155,6 +161,8 @@ export default function HostedZoneDetailsPage() {
     { label: 'Hosted zones', href: '/hosted-zones' },
     { label: zone ? zone.name : zoneId },
   ];
+
+  const hasActiveFilter = Boolean(search || typeFilter);
 
   return (
     <Shell breadcrumbs={breadcrumbs}>
@@ -180,8 +188,8 @@ export default function HostedZoneDetailsPage() {
             <Button
               variant="secondary"
               icon={<RefreshCw size={15} />}
-              onClick={() => void refetchRecords()}
-              aria-label="Refresh records"
+              onClick={() => void handleRefresh()}
+              aria-label="Refresh zone and records"
             >
               Refresh
             </Button>
@@ -208,27 +216,37 @@ export default function HostedZoneDetailsPage() {
             }}
           >
             <div>
-              <div style={{ fontWeight: 700, marginBottom: 2 }}>Hosted zone name</div>
-              <div>{zone.name}</div>
+              <div style={{ fontWeight: 700, marginBottom: 2, color: 'var(--aws-text-muted)', fontSize: 11, textTransform: 'uppercase' }}>
+                Hosted zone name
+              </div>
+              <div style={{ fontWeight: 600 }}>{zone.name}</div>
             </div>
             <div>
-              <div style={{ fontWeight: 700, marginBottom: 2 }}>Hosted zone ID</div>
+              <div style={{ fontWeight: 700, marginBottom: 2, color: 'var(--aws-text-muted)', fontSize: 11, textTransform: 'uppercase' }}>
+                Hosted zone ID
+              </div>
               <div style={{ fontFamily: 'monospace', fontSize: 12 }}>{zone.zone_id}</div>
             </div>
             <div>
-              <div style={{ fontWeight: 700, marginBottom: 2 }}>Type</div>
+              <div style={{ fontWeight: 700, marginBottom: 2, color: 'var(--aws-text-muted)', fontSize: 11, textTransform: 'uppercase' }}>
+                Type
+              </div>
               <div>
                 <Badge variant={zone.type === 'Public' ? 'blue' : 'gray'}>{zone.type}</Badge>
               </div>
             </div>
             <div>
-              <div style={{ fontWeight: 700, marginBottom: 2 }}>Record count</div>
-              <div>{zone.record_count}</div>
+              <div style={{ fontWeight: 700, marginBottom: 2, color: 'var(--aws-text-muted)', fontSize: 11, textTransform: 'uppercase' }}>
+                Record count
+              </div>
+              <div style={{ fontVariantNumeric: 'tabular-nums' }}>{zone.record_count}</div>
             </div>
             {zone.description && (
               <div>
-                <div style={{ fontWeight: 700, marginBottom: 2 }}>Description</div>
-                <div style={{ color: 'var(--aws-text-muted)' }}>{zone.description}</div>
+                <div style={{ fontWeight: 700, marginBottom: 2, color: 'var(--aws-text-muted)', fontSize: 11, textTransform: 'uppercase' }}>
+                  Description
+                </div>
+                <div style={{ color: 'var(--aws-text-dark)' }}>{zone.description}</div>
               </div>
             )}
           </div>
@@ -268,13 +286,14 @@ export default function HostedZoneDetailsPage() {
         records={records}
         isLoading={zoneLoading || recordsLoading}
         error={zoneError || recordsError}
-        onRetry={() => void refetchRecords()}
+        onRetry={() => void handleRefresh()}
         onEdit={openEdit}
         onDelete={handleDeleteRequest}
         meta={meta}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         onCreateClick={openCreate}
+        hasActiveFilter={hasActiveFilter}
       />
 
       {/* ── Record form modal ─────────────────────────────────────────────── */}
@@ -297,7 +316,7 @@ export default function HostedZoneDetailsPage() {
             <strong>{pendingDelete?.name}</strong>?
           </>
         }
-        warning="This action cannot be undone."
+        warning="This action cannot be undone and DNS resolvers will cease routing requests to this target."
         confirmLabel="Delete record"
         cancelLabel="Cancel"
         danger
