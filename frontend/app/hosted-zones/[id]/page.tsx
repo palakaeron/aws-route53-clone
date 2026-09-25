@@ -14,7 +14,9 @@ import { SearchBar } from '@/components/ui/SearchBar';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Plus } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { Plus, RefreshCw, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 const RECORD_TYPES: { value: string; label: string }[] = [
   { value: '', label: 'All record types' },
@@ -26,12 +28,19 @@ const RECORD_TYPES: { value: string; label: string }[] = [
   { value: 'NS', label: 'NS (Name Server)' },
   { value: 'PTR', label: 'PTR (Pointer)' },
   { value: 'SRV', label: 'SRV (Service Locator)' },
-  { value: 'CAA', label: 'CAA (Certification Authority Authorization)' },
+  { value: 'CAA', label: 'CAA (Certification Authority)' },
 ];
+
+interface PendingDeleteRecord {
+  id: number;
+  name: string;
+  type: string;
+}
 
 export default function HostedZoneDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  // The URL param is the PUBLIC zone ID (e.g. Z1ABCDEFGHIJKL), not the integer PK.
   const zoneId = String(params.id);
 
   const [zone, setZone] = useState<HostedZone | null>(null);
@@ -60,7 +69,7 @@ export default function HostedZoneDetailsPage() {
     updateRecord,
     deleteRecord,
   } = useRecords({
-    zoneId: zone?.id || zoneId,
+    zoneId: zone?.id ?? zoneId,
     search: debouncedSearch,
     type: typeFilter,
     page,
@@ -69,7 +78,10 @@ export default function HostedZoneDetailsPage() {
 
   const [editingRecord, setEditingRecord] = useState<DNSRecord | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PendingDeleteRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  // ── Load zone by public zone ID ─────────────────────────────────────────────
   useEffect(() => {
     async function loadZone() {
       setZoneLoading(true);
@@ -88,6 +100,7 @@ export default function HostedZoneDetailsPage() {
     }
   }, [zoneId]);
 
+  // ── Record CRUD ─────────────────────────────────────────────────────────────
   const openCreate = () => {
     setEditingRecord(null);
     setFormOpen(true);
@@ -113,13 +126,29 @@ export default function HostedZoneDetailsPage() {
     setFormOpen(false);
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete DNS record '${name}'?`)) {
-      return;
-    }
-    await deleteRecord(id, name);
+  /**
+   * Requests deletion — opens the ConfirmModal instead of window.confirm().
+   */
+  const handleDeleteRequest = (record: DNSRecord) => {
+    setPendingDelete({ id: record.id, name: record.name, type: record.type });
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteRecord(pendingDelete.id, pendingDelete.name);
+      setPendingDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    if (!isDeleting) setPendingDelete(null);
+  };
+
+  // ── Breadcrumbs & metadata ──────────────────────────────────────────────────
   const breadcrumbs = [
     { label: 'AWS Console', href: '/' },
     { label: 'Route 53', href: '/hosted-zones' },
@@ -129,21 +158,84 @@ export default function HostedZoneDetailsPage() {
 
   return (
     <Shell breadcrumbs={breadcrumbs}>
+      {/* ── Zone header ─────────────────────────────────────────────────────── */}
       <PageHeader
         title={zone ? zone.name : 'Hosted zone details'}
         description={
           zone
-            ? `Hosted zone ID: ${zone.zone_id} · ${zone.type} zone · ${zone.record_count} total records`
-            : 'Details and DNS records for this hosted zone.'
+            ? `Zone ID: ${zone.zone_id}  ·  ${zone.type} hosted zone  ·  ${zone.record_count} record${zone.record_count === 1 ? '' : 's'}`
+            : zoneLoading
+            ? 'Loading zone details…'
+            : zoneError ?? 'Details and DNS records for this hosted zone.'
         }
-        badge={zone && <Badge variant={zone.type === 'Public' ? 'blue' : 'gray'}>{zone.type}</Badge>}
+        badge={
+          zone && (
+            <Badge variant={zone.type === 'Public' ? 'blue' : 'gray'}>
+              {zone.type}
+            </Badge>
+          )
+        }
         actions={
-          <Button variant="primary" icon={<Plus size={16} />} onClick={openCreate} disabled={!zone}>
-            Create record
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              icon={<RefreshCw size={15} />}
+              onClick={() => void refetchRecords()}
+              aria-label="Refresh records"
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="primary"
+              icon={<Plus size={16} />}
+              onClick={openCreate}
+              disabled={!zone}
+            >
+              Create record
+            </Button>
+          </>
         }
       />
 
+      {/* ── Zone metadata card ────────────────────────────────────────────── */}
+      {zone && (
+        <div className="aws-card" style={{ padding: '14px 20px', marginBottom: 20, fontSize: 13 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '12px 32px',
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 2 }}>Hosted zone name</div>
+              <div>{zone.name}</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 2 }}>Hosted zone ID</div>
+              <div style={{ fontFamily: 'monospace', fontSize: 12 }}>{zone.zone_id}</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 2 }}>Type</div>
+              <div>
+                <Badge variant={zone.type === 'Public' ? 'blue' : 'gray'}>{zone.type}</Badge>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 2 }}>Record count</div>
+              <div>{zone.record_count}</div>
+            </div>
+            {zone.description && (
+              <div>
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>Description</div>
+                <div style={{ color: 'var(--aws-text-muted)' }}>{zone.description}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Filter bar ────────────────────────────────────────────────────── */}
       <div
         style={{
           display: 'flex',
@@ -161,36 +253,57 @@ export default function HostedZoneDetailsPage() {
           />
         </div>
 
-        <div style={{ width: 220 }}>
+        <div style={{ width: 240 }}>
           <Select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             options={RECORD_TYPES}
+            aria-label="Filter by record type"
           />
         </div>
       </div>
 
+      {/* ── Records table ─────────────────────────────────────────────────── */}
       <RecordTable
         records={records}
         isLoading={zoneLoading || recordsLoading}
         error={zoneError || recordsError}
-        onRetry={() => {
-          refetchRecords();
-        }}
+        onRetry={() => void refetchRecords()}
         onEdit={openEdit}
-        onDelete={handleDelete}
+        onDelete={handleDeleteRequest}
         meta={meta}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         onCreateClick={openCreate}
       />
 
+      {/* ── Record form modal ─────────────────────────────────────────────── */}
       <RecordForm
         record={editingRecord}
         defaultName={zone?.name || ''}
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSave={handleSave}
+      />
+
+      {/* ── Delete confirmation modal — no window.confirm() ──────────────── */}
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title="Delete DNS record"
+        message={
+          <>
+            Are you sure you want to delete the{' '}
+            <strong>{pendingDelete?.type}</strong> record{' '}
+            <strong>{pendingDelete?.name}</strong>?
+          </>
+        }
+        warning="This action cannot be undone."
+        confirmLabel="Delete record"
+        cancelLabel="Cancel"
+        danger
+        isLoading={isDeleting}
+        onConfirm={() => void handleDeleteConfirm()}
+        onCancel={handleDeleteCancel}
       />
     </Shell>
   );

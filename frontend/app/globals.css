@@ -1148,6 +1148,79 @@ textarea.aws-input:focus {
 }
 
 /* ==========================================================================
+   ConfirmModal
+   ========================================================================== */
+
+.aws-confirm-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.aws-confirm-modal-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--aws-text-dark);
+  line-height: 1.5;
+}
+
+.aws-confirm-modal-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background-color: var(--aws-danger-bg);
+  border: 1px solid #f9c6c0;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--aws-danger);
+  line-height: 1.4;
+}
+
+.aws-confirm-modal-warning-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ==========================================================================
+   Alert Icon Colors (referenced from Alert component)
+   ========================================================================== */
+
+.aws-alert-icon-success { color: var(--aws-success); }
+.aws-alert-icon-error   { color: var(--aws-danger); }
+.aws-alert-icon-info    { color: var(--aws-blue); }
+.aws-alert-icon-warning { color: var(--aws-warning); }
+
+/* ==========================================================================
+   Accessibility — Keyboard Focus Styles
+   ========================================================================== */
+
+/* Ensure focus rings are visible for keyboard users */
+.aws-btn:focus-visible,
+.aws-input:focus-visible,
+.aws-select:focus-visible,
+.aws-action-menu-btn:focus-visible,
+.aws-action-menu-item:focus-visible,
+.aws-modal-close-btn:focus-visible,
+.aws-nav-link:focus-visible {
+  outline: 2px solid var(--aws-blue);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Outline (ghost variant) button style for secondary ghost-link style
+   ========================================================================== */
+.aws-btn-outline {
+  background-color: #ffffff;
+  color: var(--aws-blue);
+  border-color: var(--aws-blue);
+}
+
+.aws-btn-outline:hover:not(:disabled) {
+  background-color: var(--aws-blue-light);
+}
+
+/* ==========================================================================
    Responsive Breakpoints
    ========================================================================== */
 
@@ -1192,5 +1265,15 @@ textarea.aws-input:focus {
 
   .aws-page-header-actions {
     margin-top: 10px;
+  }
+
+  .aws-search-bar {
+    max-width: 100%;
+  }
+
+  .aws-pagination-bar {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
   }
 }

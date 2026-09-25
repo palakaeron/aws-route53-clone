@@ -13,7 +13,11 @@ export interface RecordTableProps {
   error?: string | null;
   onRetry?: () => void;
   onEdit: (record: DNSRecord) => void;
-  onDelete: (id: number, name: string) => void;
+  /**
+   * Receives the full DNSRecord so the caller can build a rich
+   * confirmation dialog (type, name, etc.) without window.confirm().
+   */
+  onDelete: (record: DNSRecord) => void;
   meta?: PaginationMeta;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
@@ -63,20 +67,35 @@ export default function RecordTable({
       key: 'value',
       header: 'Value / Target',
       cell: (rec) => (
-        <span style={{ maxWidth: 420, wordBreak: 'break-all', display: 'inline-block' }}>
+        <span
+          style={{
+            maxWidth: 380,
+            wordBreak: 'break-all',
+            display: 'inline-block',
+            fontSize: 12,
+            fontFamily: rec.type === 'A' || rec.type === 'AAAA' ? 'monospace' : 'inherit',
+          }}
+        >
           {rec.value}
         </span>
       ),
     },
     {
       key: 'ttl',
-      header: 'TTL (seconds)',
-      cell: (rec) => rec.ttl,
+      header: 'TTL (s)',
+      cell: (rec) => (
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{rec.ttl}</span>
+      ),
     },
     {
       key: 'priority',
       header: 'Priority',
-      cell: (rec) => (rec.priority != null ? rec.priority : '—'),
+      cell: (rec) =>
+        rec.priority != null ? (
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{rec.priority}</span>
+        ) : (
+          <span style={{ color: 'var(--aws-text-muted)' }}>—</span>
+        ),
     },
     {
       key: 'actions',
@@ -84,6 +103,7 @@ export default function RecordTable({
       className: 'aws-text-right',
       cell: (rec) => (
         <ActionMenu
+          ariaLabel={`Actions for ${rec.name} (${rec.type})`}
           items={[
             {
               label: 'Edit record',
@@ -94,7 +114,7 @@ export default function RecordTable({
               label: 'Delete record',
               icon: <Trash2 size={14} />,
               danger: true,
-              onClick: () => onDelete(rec.id, rec.name),
+              onClick: () => onDelete(rec),
             },
           ]}
         />

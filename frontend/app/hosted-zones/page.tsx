@@ -9,12 +9,20 @@ import { usePagination } from '@/lib/hooks/usePagination';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { Button } from '@/components/ui/Button';
-import { Plus } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { Plus, RefreshCw } from 'lucide-react';
 import type { HostedZone, ZoneType } from '@/lib/types';
+
+interface PendingDelete {
+  id: number;
+  name: string;
+  zone_id: string;
+  record_count: number;
+}
 
 export default function HostedZonesPage() {
   const { page, pageSize, search, debouncedSearch, setPage, setPageSize, setSearch } =
-    usePagination({ initialPageSize: 10 });
+    usePagination({ initialPageSize: 25 });
 
   const {
     zones,
@@ -33,6 +41,8 @@ export default function HostedZonesPage() {
 
   const [editingZone, setEditingZone] = useState<HostedZone | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const openCreate = () => {
     setEditingZone(null);
@@ -53,11 +63,31 @@ export default function HostedZonesPage() {
     setFormOpen(false);
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete hosted zone '${name}'? This action cannot be undone.`)) {
-      return;
+  /**
+   * Opens the Modal-based delete confirmation instead of window.confirm().
+   */
+  const handleDeleteRequest = (zone: HostedZone) => {
+    setPendingDelete({
+      id: zone.id,
+      name: zone.name,
+      zone_id: zone.zone_id,
+      record_count: zone.record_count ?? 0,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteZone(pendingDelete.id, pendingDelete.name);
+      setPendingDelete(null);
+    } finally {
+      setIsDeleting(false);
     }
-    await deleteZone(id, name);
+  };
+
+  const handleDeleteCancel = () => {
+    if (!isDeleting) setPendingDelete(null);
   };
 
   const breadcrumbs = [
@@ -66,15 +96,30 @@ export default function HostedZonesPage() {
     { label: 'Hosted zones' },
   ];
 
+  const deleteWarning =
+    pendingDelete && pendingDelete.record_count > 0
+      ? `This hosted zone contains ${pendingDelete.record_count} DNS record${pendingDelete.record_count === 1 ? '' : 's'}. All associated records will be permanently deleted.`
+      : 'This action cannot be undone.';
+
   return (
     <Shell breadcrumbs={breadcrumbs}>
       <PageHeader
         title="Hosted zones"
         description="A hosted zone is a container for records that define how you want to route traffic for a domain and its subdomains."
         actions={
-          <Button variant="primary" icon={<Plus size={16} />} onClick={openCreate}>
-            Create hosted zone
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              icon={<RefreshCw size={15} />}
+              onClick={() => void refetch()}
+              aria-label="Refresh hosted zones"
+            >
+              Refresh
+            </Button>
+            <Button variant="primary" icon={<Plus size={16} />} onClick={openCreate}>
+              Create hosted zone
+            </Button>
+          </>
         }
       />
 
@@ -92,7 +137,7 @@ export default function HostedZonesPage() {
         error={error}
         onRetry={refetch}
         onEdit={openEdit}
-        onDelete={handleDelete}
+        onDelete={handleDeleteRequest}
         meta={meta}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
@@ -104,6 +149,26 @@ export default function HostedZonesPage() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSave={handleSave}
+      />
+
+      {/* Delete confirmation — uses Modal, not window.confirm() */}
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title="Delete hosted zone"
+        message={
+          <>
+            Are you sure you want to delete the hosted zone{' '}
+            <strong>{pendingDelete?.name}</strong> (
+            <code style={{ fontSize: 12 }}>{pendingDelete?.zone_id}</code>)?
+          </>
+        }
+        warning={deleteWarning}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        danger
+        isLoading={isDeleting}
+        onConfirm={() => void handleDeleteConfirm()}
+        onCancel={handleDeleteCancel}
       />
     </Shell>
   );

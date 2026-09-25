@@ -4,6 +4,7 @@ export * from './Select';
 export * from './Checkbox';
 export * from './Badge';
 export * from './Modal';
+export * from './ConfirmModal';
 export * from './ActionMenu';
 export * from './Toast';
 export * from './Alert';

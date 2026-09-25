@@ -13,12 +13,12 @@ interface UseHostedZonesOptions {
 }
 
 export function useHostedZones(options: UseHostedZonesOptions = {}) {
-  const { search = '', page = 1, pageSize = 10, autoFetch = true } = options;
+  const { search = '', page = 1, pageSize = 25, autoFetch = true } = options;
 
   const [zones, setZones] = useState<HostedZone[]>([]);
   const [meta, setMeta] = useState<PaginationMeta>({
     page: 1,
-    page_size: 10,
+    page_size: 25,
     total: 0,
     total_pages: 1,
   });
@@ -65,12 +65,21 @@ export function useHostedZones(options: UseHostedZonesOptions = {}) {
     }
   };
 
+  /**
+   * Updates a hosted zone via PATCH.
+   * Only the fields the form sends are forwarded; immutable fields (like
+   * the public zone ID) are never included.
+   */
   const updateZone = async (
     id: number | string,
     payload: ZonePayload
   ): Promise<HostedZone> => {
     try {
-      const updated = await api.zones.update(id, payload);
+      const updated = await api.zones.patch(id, {
+        name: payload.name,
+        type: payload.type,
+        description: payload.description,
+      });
       toast.success(`Hosted zone '${updated.name}' updated successfully.`);
       await fetchZones();
       return updated;
