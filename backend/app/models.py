@@ -51,3 +51,59 @@ class DNSRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     zone = relationship('HostedZone', back_populates='records')
+
+
+# ---------------------------------------------------------------------------
+# Mock features (Traffic Policies, Health Checks, Resolver, Profiles)
+# ---------------------------------------------------------------------------
+
+class TrafficPolicy(Base):
+    __tablename__ = 'traffic_policies'
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, default='')
+    routing_strategy = Column(String(50), nullable=False, default='Simple')
+    status = Column(String(30), nullable=False, default='Active')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class HealthCheck(Base):
+    __tablename__ = 'health_checks'
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    endpoint = Column(String(512), nullable=False, default='')
+    protocol = Column(String(20), nullable=False, default='HTTPS')
+    port = Column(Integer, nullable=False, default=443)
+    path = Column(String(512), nullable=False, default='/')
+    status = Column(String(20), nullable=False, default='Unknown')
+    failure_threshold = Column(Integer, nullable=False, default=3)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ResolverEndpoint(Base):
+    __tablename__ = 'resolver_endpoints'
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    direction = Column(String(20), nullable=False, default='Inbound')
+    status = Column(String(30), nullable=False, default='Operational')
+    ip_addresses = Column(Text, nullable=False, default='')
+    description = Column(Text, default='')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Profile(Base):
+    __tablename__ = 'profiles'
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, default='')
+    status = Column(String(30), nullable=False, default='Active')
+    associated_vpcs = Column(Text, nullable=False, default='')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

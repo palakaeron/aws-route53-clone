@@ -65,7 +65,9 @@ async function request<T>(
     });
 
     if (response.status === 401) {
-      notifyUnauthorized();
+      if (endpoint !== '/auth/me' && endpoint !== '/auth/login') {
+        notifyUnauthorized();
+      }
       const body = await response.json().catch(() => ({}));
       const errorDetail: ApiErrorDetail = body.error || {
         code: 'AUTHENTICATION_REQUIRED',

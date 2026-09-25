@@ -9,6 +9,7 @@ from .core.config import API_PREFIX, FRONTEND_ORIGINS
 from .database import get_db, engine
 from .database_migrations import apply_migrations
 from .routers import auth, records, zones
+from .routers.mock_features import tp_router, hc_router, re_router, pr_router
 from .seed import seed
 
 # Apply explicit, non-destructive schema setup before seed data is checked.
@@ -30,6 +31,10 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(zones.router)
 app.include_router(records.router)
+app.include_router(tp_router)
+app.include_router(hc_router)
+app.include_router(re_router)
+app.include_router(pr_router)
 
 
 @app.exception_handler(HTTPException)

@@ -12,8 +12,18 @@ API_PREFIX = "/api/v1"
 SESSION_COOKIE_NAME = "route53_session"
 SESSION_TTL_HOURS = int(os.getenv("SESSION_TTL_HOURS", "8"))
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
-FRONTEND_ORIGINS = [
+DEFAULT_FRONTEND_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+]
+
+env_origins = [
     origin.strip()
-    for origin in os.getenv("FRONTEND_ORIGINS", "http://localhost:3000").split(",")
+    for origin in os.getenv("FRONTEND_ORIGINS", "").split(",")
     if origin.strip()
 ]
+
+FRONTEND_ORIGINS = list(dict.fromkeys(DEFAULT_FRONTEND_ORIGINS + env_origins))
+
