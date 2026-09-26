@@ -54,7 +54,7 @@ class DNSRecord(Base):
 
 
 # ---------------------------------------------------------------------------
-# Mock features (Traffic Policies, Health Checks, Resolver, Profiles)
+# Simulated Route 53 features — persisted in SQLite, user-scoped
 # ---------------------------------------------------------------------------
 
 class TrafficPolicy(Base):
@@ -74,11 +74,11 @@ class HealthCheck(Base):
     id = Column(Integer, primary_key=True)
     owner_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     name = Column(String(255), nullable=False)
-    endpoint = Column(String(512), nullable=False, default='')
+    endpoint = Column(String(500), nullable=False)
     protocol = Column(String(20), nullable=False, default='HTTPS')
     port = Column(Integer, nullable=False, default=443)
-    path = Column(String(512), nullable=False, default='/')
-    status = Column(String(20), nullable=False, default='Unknown')
+    path = Column(String(500), nullable=False, default='/')
+    status = Column(String(30), nullable=False, default='Unknown')
     failure_threshold = Column(Integer, nullable=False, default=3)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -91,7 +91,7 @@ class ResolverEndpoint(Base):
     name = Column(String(255), nullable=False)
     direction = Column(String(20), nullable=False, default='Inbound')
     status = Column(String(30), nullable=False, default='Operational')
-    ip_addresses = Column(Text, nullable=False, default='')
+    ip_addresses = Column(Text, nullable=False, default='[]')
     description = Column(Text, default='')
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -104,6 +104,6 @@ class Profile(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, default='')
     status = Column(String(30), nullable=False, default='Active')
-    associated_vpcs = Column(Text, nullable=False, default='')
+    associated_vpcs = Column(Text, nullable=False, default='[]')
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -45,6 +45,50 @@ export interface DNSRecord {
   updated_at: string;
 }
 
+export interface TrafficPolicy {
+  id: number;
+  name: string;
+  description: string;
+  routing_strategy: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HealthCheck {
+  id: number;
+  name: string;
+  endpoint: string;
+  protocol: string;
+  port: number;
+  path: string;
+  status: string;
+  failure_threshold: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResolverEndpoint {
+  id: number;
+  name: string;
+  direction: string;
+  status: string;
+  ip_addresses: string[];
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Profile {
+  id: number;
+  name: string;
+  description: string;
+  status: string;
+  associated_vpcs: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PaginationMeta {
   page: number;
   page_size: number;
@@ -60,6 +104,7 @@ export interface ApiListResponse<T> {
   data: T[];
   meta: PaginationMeta;
 }
+
 
 export interface ApiErrorDetail {
   code: string;
@@ -102,6 +147,8 @@ export interface RecordPatchPayload {
 export interface ListQueryParams {
   search?: string;
   type?: string;
+  status?: string;
+  direction?: string;
   page?: number;
   page_size?: number;
 }

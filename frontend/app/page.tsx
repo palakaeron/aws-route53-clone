@@ -230,11 +230,27 @@ export default function DashboardPage() {
           <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--aws-text-muted)', lineHeight: 1.5 }}>
             Configure visual traffic routing policies, health checks, and global failover options.
           </p>
-          <Link href="/coming-soon?section=traffic">
+          <Link href="/traffic-policies">
             <Button variant="secondary" size="sm">Explore Traffic Policies</Button>
           </Link>
         </div>
+
+        <div className="aws-card" style={{ padding: 20 }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 700 }}>Health & Resolver</h3>
+          <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--aws-text-muted)', lineHeight: 1.5 }}>
+            Monitor endpoint health and configure hybrid cloud DNS resolution with Route 53 Resolver.
+          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Link href="/health-checks">
+              <Button variant="secondary" size="sm">Health Checks</Button>
+            </Link>
+            <Link href="/resolver">
+              <Button variant="secondary" size="sm">Resolver</Button>
+            </Link>
+          </div>
+        </div>
       </div>
+
     </Shell>
   );
 }

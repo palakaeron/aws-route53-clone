@@ -37,7 +37,10 @@ export function useHostedZones(options: UseHostedZonesOptions = {}) {
         page_size: pageSize,
       });
       setZones(res.data);
-      setMeta(res.meta);
+      if (res.meta) {
+        setMeta(res.meta);
+      }
+
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch hosted zones';
       setError(msg);

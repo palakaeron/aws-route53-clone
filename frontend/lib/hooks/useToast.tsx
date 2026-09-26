@@ -15,6 +15,7 @@ interface ToastContextValue {
   toasts: ToastMessage[];
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
+  toast: (message: string, type?: ToastType, title?: string) => void;
   success: (message: string, title?: string) => void;
   error: (message: string, title?: string) => void;
   info: (message: string, title?: string) => void;
@@ -41,6 +42,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       }, 4000);
     },
     [removeToast]
+  );
+
+  const toast = useCallback(
+    (message: string, type: ToastType = 'info', title?: string) => {
+      addToast({ type, title: title || (type.charAt(0).toUpperCase() + type.slice(1)), message });
+    },
+    [addToast]
   );
 
   const success = useCallback(
@@ -73,12 +81,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastContext.Provider
-      value={{ toasts, addToast, removeToast, success, error, info, warning }}
+      value={{ toasts, addToast, removeToast, toast, success, error, info, warning }}
     >
       {children}
     </ToastContext.Provider>
   );
 }
+
 
 export function useToast() {
   const context = useContext(ToastContext);

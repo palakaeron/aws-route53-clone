@@ -132,59 +132,63 @@ def _legacy_zone_id(database_id: int) -> str:
 
 
 def _migrate_to_v4(connection) -> None:
-    """Create the four mock-feature tables (traffic_policies, health_checks, resolver_endpoints, profiles)."""
+    """Create tables for simulated Route 53 features: Traffic Policies, Health Checks, Resolver, Profiles."""
     connection.execute(text(
         "CREATE TABLE IF NOT EXISTS traffic_policies ("
         "id INTEGER PRIMARY KEY, "
-        "owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+        "owner_id INTEGER NOT NULL, "
         "name VARCHAR(255) NOT NULL, "
         "description TEXT DEFAULT '', "
         "routing_strategy VARCHAR(50) NOT NULL DEFAULT 'Simple', "
         "status VARCHAR(30) NOT NULL DEFAULT 'Active', "
         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
-        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+        "FOREIGN KEY(owner_id) REFERENCES users(id) ON DELETE CASCADE)"
     ))
     connection.execute(text("CREATE INDEX IF NOT EXISTS ix_traffic_policies_owner_id ON traffic_policies (owner_id)"))
 
     connection.execute(text(
         "CREATE TABLE IF NOT EXISTS health_checks ("
         "id INTEGER PRIMARY KEY, "
-        "owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+        "owner_id INTEGER NOT NULL, "
         "name VARCHAR(255) NOT NULL, "
-        "endpoint VARCHAR(512) NOT NULL DEFAULT '', "
+        "endpoint VARCHAR(500) NOT NULL, "
         "protocol VARCHAR(20) NOT NULL DEFAULT 'HTTPS', "
         "port INTEGER NOT NULL DEFAULT 443, "
-        "path VARCHAR(512) NOT NULL DEFAULT '/', "
-        "status VARCHAR(20) NOT NULL DEFAULT 'Unknown', "
+        "path VARCHAR(500) NOT NULL DEFAULT '/', "
+        "status VARCHAR(30) NOT NULL DEFAULT 'Unknown', "
         "failure_threshold INTEGER NOT NULL DEFAULT 3, "
         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
-        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+        "FOREIGN KEY(owner_id) REFERENCES users(id) ON DELETE CASCADE)"
     ))
     connection.execute(text("CREATE INDEX IF NOT EXISTS ix_health_checks_owner_id ON health_checks (owner_id)"))
 
     connection.execute(text(
         "CREATE TABLE IF NOT EXISTS resolver_endpoints ("
         "id INTEGER PRIMARY KEY, "
-        "owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+        "owner_id INTEGER NOT NULL, "
         "name VARCHAR(255) NOT NULL, "
         "direction VARCHAR(20) NOT NULL DEFAULT 'Inbound', "
         "status VARCHAR(30) NOT NULL DEFAULT 'Operational', "
-        "ip_addresses TEXT NOT NULL DEFAULT '', "
+        "ip_addresses TEXT NOT NULL DEFAULT '[]', "
         "description TEXT DEFAULT '', "
         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
-        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+        "FOREIGN KEY(owner_id) REFERENCES users(id) ON DELETE CASCADE)"
     ))
     connection.execute(text("CREATE INDEX IF NOT EXISTS ix_resolver_endpoints_owner_id ON resolver_endpoints (owner_id)"))
 
     connection.execute(text(
         "CREATE TABLE IF NOT EXISTS profiles ("
         "id INTEGER PRIMARY KEY, "
-        "owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+        "owner_id INTEGER NOT NULL, "
         "name VARCHAR(255) NOT NULL, "
         "description TEXT DEFAULT '', "
         "status VARCHAR(30) NOT NULL DEFAULT 'Active', "
-        "associated_vpcs TEXT NOT NULL DEFAULT '', "
+        "associated_vpcs TEXT NOT NULL DEFAULT '[]', "
         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
-        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+        "FOREIGN KEY(owner_id) REFERENCES users(id) ON DELETE CASCADE)"
     ))
     connection.execute(text("CREATE INDEX IF NOT EXISTS ix_profiles_owner_id ON profiles (owner_id)"))

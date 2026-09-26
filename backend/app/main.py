@@ -9,7 +9,7 @@ from .core.config import API_PREFIX, FRONTEND_ORIGINS
 from .database import get_db, engine
 from .database_migrations import apply_migrations
 from .routers import auth, records, zones
-from .routers.mock_features import tp_router, hc_router, re_router, pr_router
+from .routers import simulated
 from .seed import seed
 
 # Apply explicit, non-destructive schema setup before seed data is checked.
@@ -17,7 +17,7 @@ apply_migrations(engine)
 with next(get_db()) as db:
     seed(db)
 
-app = FastAPI(title="Route 53 Clone API", version="1.1.0")
+app = FastAPI(title="Route 53 Clone API", version="1.2.0")
 
 # The frontend is a separate Next.js application during development.
 app.add_middleware(
@@ -31,10 +31,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(zones.router)
 app.include_router(records.router)
-app.include_router(tp_router)
-app.include_router(hc_router)
-app.include_router(re_router)
-app.include_router(pr_router)
+app.include_router(simulated.router)
 
 
 @app.exception_handler(HTTPException)
@@ -55,3 +52,9 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError) 
 def health():
     """Simple health check used by local/deployed environments."""
     return {"data": {"status": "ok"}}
+
+
+@app.get("/health", tags=["System"])
+def root_health():
+    """Platform health check alias for deployment providers."""
+    return {"status": "ok"}

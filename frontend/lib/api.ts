@@ -8,10 +8,14 @@ import type {
   ApiListResponse,
   ApiResponse,
   DNSRecord,
+  HealthCheck,
   HostedZone,
   ListQueryParams,
+  Profile,
   RecordPatchPayload,
   RecordPayload,
+  ResolverEndpoint,
+  TrafficPolicy,
   User,
   ZonePatchPayload,
   ZonePayload,
@@ -65,9 +69,7 @@ async function request<T>(
     });
 
     if (response.status === 401) {
-      if (endpoint !== '/auth/me' && endpoint !== '/auth/login') {
-        notifyUnauthorized();
-      }
+      notifyUnauthorized();
       const body = await response.json().catch(() => ({}));
       const errorDetail: ApiErrorDetail = body.error || {
         code: 'AUTHENTICATION_REQUIRED',
@@ -97,7 +99,7 @@ async function request<T>(
     }
     throw new ApiError(
       'NETWORK_ERROR',
-      err instanceof Error ? err.message : 'Network request failed. Please check backend status.'
+      'Unable to connect to the Route 53 API.'
     );
   }
 }
@@ -223,6 +225,125 @@ export const api = {
       return request<void>(`/hosted-zones/${zoneId}/records/${recordId}`, {
         method: 'DELETE',
       });
+    },
+  },
+
+  trafficPolicies: {
+    list: async (params: ListQueryParams = {}): Promise<TrafficPolicy[]> => {
+      const query = new URLSearchParams();
+      if (params.search) query.set('search', params.search);
+      if (params.page) query.set('page', String(params.page));
+      if (params.page_size) query.set('page_size', String(params.page_size));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      const res = await request<ApiListResponse<TrafficPolicy>>(`/traffic-policies${suffix}`);
+      return res.data;
+    },
+    create: async (payload: Partial<TrafficPolicy>): Promise<TrafficPolicy> => {
+      const res = await request<ApiResponse<TrafficPolicy>>('/traffic-policies', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      return res.data;
+    },
+    update: async (id: number, payload: Partial<TrafficPolicy>): Promise<TrafficPolicy> => {
+      const res = await request<ApiResponse<TrafficPolicy>>(`/traffic-policies/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      return res.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      return request<void>(`/traffic-policies/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  healthChecks: {
+    list: async (params: ListQueryParams = {}): Promise<HealthCheck[]> => {
+      const query = new URLSearchParams();
+      if (params.search) query.set('search', params.search);
+      if (params.status) query.set('status', params.status);
+      if (params.page) query.set('page', String(params.page));
+      if (params.page_size) query.set('page_size', String(params.page_size));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      const res = await request<ApiListResponse<HealthCheck>>(`/health-checks${suffix}`);
+      return res.data;
+    },
+    create: async (payload: Partial<HealthCheck>): Promise<HealthCheck> => {
+      const res = await request<ApiResponse<HealthCheck>>('/health-checks', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      return res.data;
+    },
+    update: async (id: number, payload: Partial<HealthCheck>): Promise<HealthCheck> => {
+      const res = await request<ApiResponse<HealthCheck>>(`/health-checks/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      return res.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      return request<void>(`/health-checks/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  resolverEndpoints: {
+    list: async (params: ListQueryParams = {}): Promise<ResolverEndpoint[]> => {
+      const query = new URLSearchParams();
+      if (params.search) query.set('search', params.search);
+      if (params.direction) query.set('direction', params.direction);
+      if (params.page) query.set('page', String(params.page));
+      if (params.page_size) query.set('page_size', String(params.page_size));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      const res = await request<ApiListResponse<ResolverEndpoint>>(`/resolver-endpoints${suffix}`);
+      return res.data;
+    },
+    create: async (payload: Partial<ResolverEndpoint>): Promise<ResolverEndpoint> => {
+      const res = await request<ApiResponse<ResolverEndpoint>>('/resolver-endpoints', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      return res.data;
+    },
+    update: async (id: number, payload: Partial<ResolverEndpoint>): Promise<ResolverEndpoint> => {
+      const res = await request<ApiResponse<ResolverEndpoint>>(`/resolver-endpoints/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      return res.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      return request<void>(`/resolver-endpoints/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  profiles: {
+    list: async (params: ListQueryParams = {}): Promise<Profile[]> => {
+      const query = new URLSearchParams();
+      if (params.search) query.set('search', params.search);
+      if (params.status) query.set('status', params.status);
+      if (params.page) query.set('page', String(params.page));
+      if (params.page_size) query.set('page_size', String(params.page_size));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      const res = await request<ApiListResponse<Profile>>(`/profiles${suffix}`);
+      return res.data;
+    },
+    create: async (payload: Partial<Profile>): Promise<Profile> => {
+      const res = await request<ApiResponse<Profile>>('/profiles', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      return res.data;
+    },
+    update: async (id: number, payload: Partial<Profile>): Promise<Profile> => {
+      const res = await request<ApiResponse<Profile>>(`/profiles/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      return res.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      return request<void>(`/profiles/${id}`, { method: 'DELETE' });
     },
   },
 };

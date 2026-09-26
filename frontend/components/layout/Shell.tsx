@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   Globe2,
   HeartPulse,
@@ -37,16 +37,28 @@ const navItems: NavigationItem[] = [
   { href: '/profiles', label: 'Profiles', icon: Users },
 ];
 
+
 function SidebarNav({ onNavClick }: { onNavClick: () => void }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   return (
     <nav className="aws-nav-group" aria-label="DNS Management Navigation">
       <div className="aws-nav-section-title">DNS Management</div>
       {navItems.map((item) => {
         const Icon = item.icon;
-        const isActive =
-          item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+
+        let isActive = false;
+        if (item.href === '/') {
+          isActive = pathname === '/';
+        } else if (item.href.includes('?')) {
+          const [basePath, queryString] = item.href.split('?');
+          const itemSection = new URLSearchParams(queryString).get('section');
+          const currentSection = searchParams.get('section');
+          isActive = pathname === basePath && currentSection === itemSection;
+        } else {
+          isActive = pathname.startsWith(item.href);
+        }
 
         return (
           <Link
@@ -57,6 +69,7 @@ function SidebarNav({ onNavClick }: { onNavClick: () => void }) {
           >
             <Icon size={18} className="aws-nav-link-icon" />
             <span className="aws-nav-link-text">{item.label}</span>
+            {item.isComingSoon && <span className="aws-coming-soon-badge">Soon</span>}
           </Link>
         );
       })}

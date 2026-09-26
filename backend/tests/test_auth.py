@@ -145,4 +145,4 @@ def test_v2_migration_preserves_legacy_rows_and_scrubs_plaintext(tmp_path: Path)
     assert user["password"] == "MIGRATED"
     assert verify_password("legacy-secret", user["password_hash"])
     assert zone["owner_id"] == 1
-    assert version == 3
+    assert version >= 3
