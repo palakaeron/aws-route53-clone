@@ -19,7 +19,7 @@ service = AuthService()
 def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     """Validate credentials and establish an opaque HTTP-only session cookie."""
     user, session = service.login(db, payload.email, payload.password)
-    response.set_cookie(key=SESSION_COOKIE_NAME, value=session.token, httponly=True, secure=SESSION_COOKIE_SECURE, samesite="lax", max_age=SESSION_TTL_HOURS * 60 * 60, path="/")
+    response.set_cookie(key=SESSION_COOKIE_NAME, value=session.token, httponly=True, secure=True, samesite="none", max_age=SESSION_TTL_HOURS * 60 * 60, path="/")
     return data_response(UserOut.model_validate(user).model_dump(mode="json"))
 
 
@@ -27,7 +27,7 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
 def logout(session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME), db: Session = Depends(get_db)) -> Response:
     service.logout(db, session_token)
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
-    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/", secure=True, samesite="none")
     return response
 
 
